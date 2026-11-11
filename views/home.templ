@@ -1,0 +1,179 @@
+package views
+
+import (
+	"fmt"
+	db "github.com/neouuuu/TrabajoPracticoEspecial/db/sqlc"
+)
+
+templ Home(
+	eventos []db.Evento,
+	reservas map[int32]int64,
+	usuarioID string,
+	tickets []db.ListarTicketsPorUsuarioRow,
+	eventoEditar *db.Evento,
+	mensaje string,
+) {
+	@Layout("IAccess", HomeContent(eventos, reservas, usuarioID, tickets, eventoEditar, mensaje))
+}
+
+templ HomeContent(
+	eventos []db.Evento,
+	reservas map[int32]int64,
+	usuarioID string,
+	tickets []db.ListarTicketsPorUsuarioRow,
+	eventoEditar *db.Evento,
+	mensaje string,
+) {
+	<header class="cabecera">
+		<h1>IAccess</h1>
+		<p>Reservá tu entrada para los próximos eventos.</p>
+	</header>
+
+	if mensaje != "" {
+		<p class="estado error">{ mensaje }</p>
+	}
+
+	<main class="layout">
+		<aside class="columna-lateral">
+			<section class="panel">
+				<h2>Usuario</h2>
+				<form action="/usuarios" method="POST" class="formulario">
+					<label for="usuario-nombre">Nombre</label>
+					<input type="text" id="usuario-nombre" name="nombre" required/>
+
+					<label for="usuario-email">Email</label>
+					<input type="email" id="usuario-email" name="email" required/>
+
+					<button type="submit" class="btn btn-primario">Crear usuario</button>
+				</form>
+
+				<form action="/" method="GET" class="formulario formulario-inline">
+					<label for="usuario-id">Tu ID de usuario</label>
+					<div class="fila">
+						<input type="number" id="usuario-id" name="usuario_id" min="1" value={ usuarioID } required/>
+						<button type="submit" class="btn btn-secundario">Usar ID</button>
+					</div>
+				</form>
+			</section>
+
+			<section class="panel">
+				<h2>
+					if eventoEditar != nil {
+						Editar evento
+					} else {
+						Nuevo evento
+					}
+				</h2>
+
+				<form action="/eventos" method="POST" class="formulario">
+					<input type="hidden" name="usuario_id" value={ usuarioID }/>
+
+					if eventoEditar != nil {
+						<input type="hidden" name="id" value={ fmt.Sprint(eventoEditar.ID) }/>
+					}
+
+					<label for="evento-nombre">Nombre</label>
+					if eventoEditar != nil {
+						<input type="text" id="evento-nombre" name="nombre" value={ eventoEditar.Nombre } required/>
+					} else {
+						<input type="text" id="evento-nombre" name="nombre" required/>
+					}
+
+					<label for="evento-capacidad">Capacidad</label>
+					if eventoEditar != nil {
+						<input type="number" id="evento-capacidad" name="capacidad" min="1" value={ fmt.Sprint(eventoEditar.Capacidad) } required/>
+					} else {
+						<input type="number" id="evento-capacidad" name="capacidad" min="1" required/>
+					}
+
+					<label for="evento-fecha">Fecha y hora</label>
+					if eventoEditar != nil {
+						<input type="datetime-local" id="evento-fecha" name="fecha" value={ eventoEditar.Fecha.Format("2006-01-02T15:04") } required/>
+					} else {
+						<input type="datetime-local" id="evento-fecha" name="fecha" required/>
+					}
+
+					if eventoEditar != nil {
+						<button type="submit" class="btn btn-primario">Guardar cambios</button>
+						<a href="/" class="btn btn-secundario">Cancelar edición</a>
+					} else {
+						<button type="submit" class="btn btn-primario">Crear evento</button>
+					}
+				</form>
+			</section>
+		</aside>
+
+		<div class="columna-principal">
+			<section class="panel">
+				<h2>Eventos</h2>
+
+				if len(eventos) == 0 {
+					<p class="vacio">Todavía no hay eventos disponibles.</p>
+				} else {
+					<ul class="lista">
+						for _, evento := range eventos {
+							<li class="ticket">
+								<div class="ticket-cuerpo">
+									<h3>{ evento.Nombre }</h3>
+									<p class="ticket-fecha">
+										{ evento.Fecha.Format("02/01/2006 15:04") }
+									</p>
+									<p>
+										Reservas: { fmt.Sprint(reservas[evento.ID]) } / { fmt.Sprint(evento.Capacidad) }
+									</p>
+									<div class="cupo-barra">
+										<span style={ fmt.Sprintf("width: %.2f%%", float64(reservas[evento.ID])/float64(evento.Capacidad)*100) }></span>
+									</div>
+								</div>
+
+								<div class="ticket-talon">
+									if usuarioID != "" {
+										<form action="/tickets" method="POST">
+											<input type="hidden" name="usuario_id" value={ usuarioID }/>
+											<input type="hidden" name="evento_id" value={ fmt.Sprint(evento.ID) }/>
+											<button type="submit" class="btn btn-primario">Reservar</button>
+										</form>
+									}
+									<a class="btn btn-secundario" href={ fmt.Sprintf("/?editar=%d", evento.ID) }>
+										Editar
+									</a>
+								</div>
+							</li>
+						}
+					</ul>
+				}
+			</section>
+
+			<section class="panel">
+				<h2>Mis tickets</h2>
+
+				if usuarioID == "" {
+					<p class="vacio">Ingresá tu ID de usuario para consultar tus tickets.</p>
+				} else if len(tickets) == 0 {
+					<p class="vacio">Todavía no tenés tickets reservados.</p>
+				} else {
+					<ul class="lista lista-compacta">
+						for _, ticket := range tickets {
+							<li class="ticket">
+								<div class="ticket-cuerpo">
+									<h3>{ ticket.EventoNombre }</h3>
+									<p class="ticket-fecha">
+										{ ticket.EventoFecha.Format("02/01/2006 15:04") }
+									</p>
+								</div>
+								<div class="ticket-talon">
+									<form
+										action={ fmt.Sprintf("/tickets/%d/cancelar?usuario_id=%s", ticket.TicketID, usuarioID) }
+										method="POST"
+									>
+										<button type="submit" class="btn btn-peligro">Cancelar</button>
+									</form>
+								</div>
+							</li>
+						}
+					</ul>
+				}
+			</section>
+		</div>
+	</main>
+}
