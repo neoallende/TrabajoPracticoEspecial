@@ -413,3 +413,36 @@ body {
         transition: none;
     }
 }
+/* Indicador de actividad para las navegaciones y envíos procesados por HTMX. */
+.indicador-carga {
+    position: fixed;
+    z-index: 1000;
+    top: 1rem;
+    right: 1rem;
+    padding: 0.65rem 1rem;
+    border-radius: 0.5rem;
+    background: #172554;
+    color: #fff;
+    box-shadow: 0 8px 24px rgb(15 23 42 / 18%);
+    font-size: 0.875rem;
+}
+
+.indicador-carga.htmx-indicator {
+    display: none;
+}
+
+.indicador-carga.htmx-indicator.htmx-request {
+    display: block;
+}
+
+/* Evita que el contenido parezca congelado durante una actualización parcial. */
+#app-content.htmx-swapping {
+    opacity: 0.65;
+    transition: opacity 120ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #app-content.htmx-swapping {
+        transition: none;
+    }
+}

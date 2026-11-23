@@ -57,9 +57,10 @@ En esta versión se incorporaron las siguientes modificaciones:
 - **Go** (`net/http` con `http.ServeMux`) como servidor.
 - **[templ](https://templ.guide/):** vistas tipadas que se compilan a Go.
 - **PostgreSQL 15** + **[sqlc](https://sqlc.dev/)** para consultas tipadas, con el driver [lib/pq](https://github.com/lib/pq).
+- **[HTMX 2](https://htmx.org/)** para navegación y actualizaciones parciales sin implementar una SPA JavaScript.
 - **Docker / Docker Compose** para la base de datos y la aplicación.
 
-Go genera el HTML en el servidor y los formularios se envían mediante `POST` y redirecciones, sin JavaScript en el frontend.
+Go renderiza los componentes del servidor mediante `templ` y HTMX es el único mecanismo de interacción de la aplicación. Los formularios y controles no tienen `action`, `method` ni enlaces alternativos: envían solicitudes `hx-get`/`hx-post` y reciben fragmentos HTML. La aplicación requiere HTMX para operar; no implementa degradación progresiva ni flujos convencionales PRG.
 
 ## Estructura
 
@@ -69,13 +70,16 @@ Go genera el HTML en el servidor y los formularios se envían mediante `POST` y 
 ├── handlers/
 │   ├── home.go             # Página principal
 │   ├── eventos.go          # Creación, edición y eliminación de eventos
-│   ├── usuarios.go         # Registro y eliminación de usuarios
-│   ├── permisos.go         # Verificación de permisos según el rol
+│   ├── usuarios.go         # Registro de usuarios
+│   ├── htmx.go             # Validación de solicitudes HTMX y errores parciales
+│   ├── partials.go         # Preparación de datos para actualizaciones parciales
+│   ├── esadmin.go          # Verificación del rol administrador
 │   └── notfound.go         # Manejo de rutas inexistentes (404)
 ├── views/
-│   ├── layout.templ        # Estructura HTML común
-│   ├── home.templ          # Página principal
-│   ├── notfound.templ      # Página de error 404
+│   ├── app.templ           # Página inicial y formulario de eventos
+│   ├── fragments.templ     # Componentes y fragmentos HTMX
+│   ├── layout.templ        # Layout HTML compartido
+│   ├── helpers.go          # Adaptadores entre handlers y componentes
 │   └── *_templ.go          # Código generado por templ
 ├── db/
 │   ├── schema.sql          # Esquema y datos iniciales de la BD
@@ -96,15 +100,26 @@ Go genera el HTML en el servidor y los formularios se envían mediante `POST` y 
 
 | Método | Ruta | Qué hace | Respuesta |
 |---|---|---|---|
-| `GET` | `/` | Página principal. Acepta `?usuario_id=N` y `?editar=N` | HTML |
-| `POST` | `/usuarios` | Registra un nuevo usuario | `303` → `/?usuario_id=<nuevo>` |
-| `POST` | `/usuarios/{id}/eliminar` | Elimina un usuario | `303` → `/` |
-| `POST` | `/eventos` | Crea o edita un evento (solo admin) | `303` → `/` |
-| `POST` | `/eventos/{id}/eliminar` | Elimina un evento (solo admin) | `303` → `/` |
-| `POST` | `/tickets` | Reserva un ticket si hay capacidad disponible (solo user) | `303` → `/?usuario_id=N` |
-| `POST` | `/tickets/{id}/cancelar` | Cancela una reserva | `303` → `/?usuario_id=N` |
+| `GET` | `/` | Página principal. Acepta `?usuario_id=N` y `?editar=N` | Documento inicial o fragmento del formulario para HTMX |
+| `GET` | `/fragmentos/sesion` | Cambia el usuario seleccionado | Fragmentos OOB de los paneles dependientes del usuario |
+| `POST` | `/usuarios` | Registra un nuevo usuario | Fragmentos OOB del selector, sesión, eventos y tickets |
+| `POST` | `/eventos` | Crea o edita un evento (solo admin) | Fragmentos OOB del evento afectado |
+| `POST` | `/eventos/{id}/eliminar` | Elimina un evento (solo admin) | Fragmentos OOB del evento afectado |
+| `POST` | `/tickets` | Reserva un ticket si hay capacidad disponible (solo user) | Reemplaza el evento y agrega el ticket reservado |
+| `POST` | `/tickets/{id}/cancelar` | Cancela una reserva | Elimina el ticket y actualiza el evento afectado |
 | `GET` | `/styles.css` | Hoja de estilos | CSS |
 | Cualquier otra ruta | — | Página de error 404 | HTML |
+
+
+### Actualizaciones parciales con HTMX
+
+- No se usa `hx-boost` global ni se reemplaza `#app-content` después de cada operación.
+- Los formularios de creación, edición, reserva y cancelación envían peticiones HTMX con `hx-post` y `hx-swap="none"`. Las respuestas contienen únicamente los elementos afectados mediante `hx-swap-oob`: un evento o ticket por operación, o los componentes dependientes al cambiar de usuario.
+- Crear un evento agrega un único elemento a la lista; editarlo reemplaza ese elemento y restablece el formulario. Eliminarlo quita ese elemento y los tickets asociados al usuario seleccionado.
+- Reservar un ticket reemplaza el evento para reflejar los cupos y agrega el ticket. Cancelarlo elimina ese ticket y reemplaza el evento afectado.
+- Cambiar el usuario seleccionado actualiza el selector, el estado de sesión, el panel de eventos, los tickets y el formulario de administración cuando corresponda.
+- Editar un evento carga solamente `#panel-form-evento`; cancelar la edición reemplaza ese mismo panel.
+- Los endpoints de interacción exigen `HX-Request`; no hay redirecciones PRG ni formularios HTML alternativos. Los errores de validación se devuelven como notificaciones OOB para que también sean visibles en la interfaz.
 
 ## Cómo ejecutarlo
 

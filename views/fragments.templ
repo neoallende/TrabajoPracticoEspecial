@@ -1,0 +1,140 @@
+package views
+
+import (
+	"fmt"
+	"strconv"
+
+	db "github.com/neouuuu/TrabajoPracticoEspecial/db/sqlc"
+)
+
+templ Notificacion(mensaje string, errorTipo bool) {
+	<div id="notificaciones" hx-swap-oob="innerHTML">
+		if mensaje != "" {
+			<p class={ claseNotificacion(errorTipo) }>{ mensaje }</p>
+		}
+	</div>
+}
+
+templ EventoItem(evento db.ListarEventosConReservasRow, usuarioID string, esAdmin bool, swap string) {
+	if swap != "" {
+		<li class="ticket" id={ "evento-" + strconv.Itoa(int(evento.ID)) } hx-swap-oob={ swap }>
+			@EventoItemContenido(evento, usuarioID, esAdmin)
+		</li>
+	} else {
+		<li class="ticket" id={ "evento-" + strconv.Itoa(int(evento.ID)) }>
+			@EventoItemContenido(evento, usuarioID, esAdmin)
+		</li>
+	}
+}
+
+templ EventoItemContenido(evento db.ListarEventosConReservasRow, usuarioID string, esAdmin bool) {
+	<div class="ticket-cuerpo">
+		<h3>{ evento.Nombre }</h3>
+		<p class="ticket-fecha">{ evento.Fecha.Format("02/01/2006 15:04") }</p>
+		<p>Reservas: { strconv.FormatInt(evento.Reservas, 10) } / { strconv.Itoa(int(evento.Capacidad)) }</p>
+		<div class="cupo-barra"><span style={ fmt.Sprintf("width: %.2f%%", porcentaje(evento.Reservas, evento.Capacidad)) }></span></div>
+	</div>
+	<div class="ticket-talon">
+		if usuarioID != "" && !esAdmin {
+			<form hx-post="/tickets" hx-swap="none" hx-indicator="#indicador-carga">
+				<input type="hidden" name="usuario_id" value={ usuarioID }/>
+				<input type="hidden" name="evento_id" value={ strconv.Itoa(int(evento.ID)) }/>
+				<button type="submit" class="btn btn-primario">Reservar</button>
+			</form>
+		}
+		if esAdmin {
+			<button type="button" class="btn btn-secundario" hx-get={ fmt.Sprintf("/?editar=%d&usuario_id=%s", evento.ID, usuarioID) } hx-target="#panel-form-evento" hx-select="#panel-form-evento" hx-swap="outerHTML" hx-push-url="true">Editar</button>
+			<button type="button" class="btn btn-peligro" hx-post={ fmt.Sprintf("/eventos/%d/eliminar?usuario_id=%s", evento.ID, usuarioID) } hx-swap="none" hx-confirm="¿Seguro que querés eliminar este evento? También se eliminarán sus tickets.">Eliminar evento</button>
+		}
+	</div>
+}
+
+templ EventoEliminar(id int32) {
+	<li id={ "evento-" + strconv.Itoa(int(id)) } hx-swap-oob="delete"></li>
+}
+
+templ TicketItem(ticket db.ListarTicketsPorUsuarioRow, usuarioID string, swap string) {
+	if swap != "" {
+		<li class="ticket" id={ "ticket-" + strconv.Itoa(int(ticket.TicketID)) } hx-swap-oob={ swap }>
+			@TicketItemContenido(ticket, usuarioID)
+		</li>
+	} else {
+		<li class="ticket" id={ "ticket-" + strconv.Itoa(int(ticket.TicketID)) }>
+			@TicketItemContenido(ticket, usuarioID)
+		</li>
+	}
+}
+
+templ TicketItemContenido(ticket db.ListarTicketsPorUsuarioRow, usuarioID string) {
+	<div class="ticket-cuerpo">
+		<h3>{ ticket.EventoNombre }</h3>
+		<p class="ticket-fecha">{ ticket.EventoFecha.Format("02/01/2006 15:04") }</p>
+	</div>
+	<div class="ticket-talon">
+		<button type="button" class="btn btn-peligro" hx-post={ fmt.Sprintf("/tickets/%d/cancelar?usuario_id=%s", ticket.TicketID, usuarioID) } hx-swap="none" hx-confirm="¿Querés cancelar esta reserva?">Cancelar</button>
+	</div>
+}
+
+templ TicketEliminar(id int32) {
+	<li id={ "ticket-" + strconv.Itoa(int(id)) } hx-swap-oob="delete"></li>
+}
+
+templ EstadoEventos(vacio bool) {
+	if vacio {
+		<p id="estado-eventos" class="vacio" hx-swap-oob="outerHTML">Todavía no hay eventos disponibles.</p>
+	} else {
+		<p id="estado-eventos" class="vacio" hidden hx-swap-oob="outerHTML"></p>
+	}
+}
+
+templ EstadoTickets(vacio bool, usuarioID string) {
+	if usuarioID == "" {
+		<p id="estado-tickets" class="vacio" hx-swap-oob="outerHTML">Ingresá tu ID de usuario para consultar tus tickets.</p>
+	} else if vacio {
+		<p id="estado-tickets" class="vacio" hx-swap-oob="outerHTML">Todavía no tenés tickets reservados.</p>
+	} else {
+		<p id="estado-tickets" class="vacio" hidden hx-swap-oob="outerHTML"></p>
+	}
+}
+
+templ SelectorUsuario(usuarioID string, rol string) {
+	<div id="selector-usuario" hx-swap-oob="outerHTML">
+		<form class="formulario formulario-inline" hx-get="/fragmentos/sesion" hx-swap="none">
+			<label for="usuario-id">Tu ID de usuario</label>
+			<div class="fila">
+				<input type="number" id="usuario-id" name="usuario_id" min="1" value={ usuarioID } required/>
+				<button type="submit" class="btn btn-secundario">Usar ID</button>
+			</div>
+		</form>
+	</div>
+	<p id="estado-sesion" class="estado" hx-swap-oob="outerHTML">{ rol }</p>
+}
+
+templ PanelTicketsView(usuarioID string, tickets []db.ListarTicketsPorUsuarioRow, oob bool) {
+	if oob {
+		<section id="panel-tickets" class="panel" hx-swap-oob="outerHTML">
+			@PanelTicketsContenido(usuarioID, tickets)
+		</section>
+	} else {
+		<section id="panel-tickets" class="panel">
+			@PanelTicketsContenido(usuarioID, tickets)
+		</section>
+	}
+}
+
+templ PanelTicketsContenido(usuarioID string, tickets []db.ListarTicketsPorUsuarioRow) {
+	<h2>Mis tickets</h2>
+	if usuarioID == "" {
+		<p id="estado-tickets" class="vacio">Ingresá tu ID de usuario para consultar tus tickets.</p>
+	} else if len(tickets) == 0 {
+		<p id="estado-tickets" class="vacio">Todavía no tenés tickets reservados.</p>
+	} else {
+		<p id="estado-tickets" class="vacio" hidden></p>
+	}
+	<ul id="lista-tickets" class="lista lista-compacta">
+		for _, ticket := range tickets {
+			@TicketItem(ticket, usuarioID, "")
+		}
+	</ul>
+}
+

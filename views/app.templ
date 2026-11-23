@@ -1,0 +1,101 @@
+package views
+
+import db "github.com/neouuuu/TrabajoPracticoEspecial/db/sqlc"
+
+templ AppContent(eventos []db.ListarEventosConReservasRow, usuarioID string, tickets []db.ListarTicketsPorUsuarioRow, eventoEditar *db.Evento, esAdmin bool) {
+	<div id="app-content">
+		<header class="cabecera">
+			<h1>IAccess</h1>
+			<p>Reservá tu entrada para los próximos eventos.</p>
+		</header>
+		<div id="notificaciones"></div>
+		<main class="layout">
+			<aside class="columna-lateral">
+				<section class="panel">
+					<h2>Usuario</h2>
+					<form class="formulario" hx-post="/usuarios" hx-swap="none" hx-indicator="#indicador-carga">
+						<label for="usuario-nombre">Nombre</label>
+						<input type="text" id="usuario-nombre" name="nombre" required/>
+						<label for="usuario-email">Email</label>
+						<input type="email" id="usuario-email" name="email" required/>
+						<button type="submit" class="btn btn-primario">Crear usuario</button>
+					</form>
+					<div id="selector-usuario">
+						<form class="formulario formulario-inline" hx-get="/fragmentos/sesion" hx-swap="none">
+							<label for="usuario-id">Tu ID de usuario</label>
+							<div class="fila">
+								<input type="number" id="usuario-id" name="usuario_id" min="1" value={ usuarioID } required/>
+								<button type="submit" class="btn btn-secundario">Usar ID</button>
+							</div>
+						</form>
+					</div>
+					<p id="estado-sesion" class="estado">
+						if usuarioID == "" {
+							No hay una sesión seleccionada.
+						} else if esAdmin {
+							Sesión seleccionada: Administrador
+						} else {
+							Sesión seleccionada: Usuario
+						}
+					</p>
+				</section>
+				@PanelFormEventoView(usuarioID, esAdmin, eventoEditar, false)
+			</aside>
+			<div class="columna-principal">
+				<section id="panel-eventos" class="panel">
+					<h2>Eventos</h2>
+					if len(eventos) == 0 {
+						<p id="estado-eventos" class="vacio">Todavía no hay eventos disponibles.</p>
+					} else {
+						<p id="estado-eventos" class="vacio" hidden></p>
+					}
+					<ul id="lista-eventos" class="lista">
+						for _, evento := range eventos {
+							@EventoItem(evento, usuarioID, esAdmin, "")
+						}
+					</ul>
+				</section>
+				@PanelTicketsView(usuarioID, tickets, false)
+			</div>
+		</main>
+	</div>
+}
+
+templ PanelFormEventoView(usuarioID string, esAdmin bool, evento *db.Evento, oob bool) {
+	if !esAdmin {
+		if oob {
+			<section id="panel-form-evento" class="panel" hidden hx-swap-oob="outerHTML"></section>
+		} else {
+			<section id="panel-form-evento" class="panel" hidden></section>
+		}
+	} else {
+		if oob {
+			<section id="panel-form-evento" class="panel" hx-swap-oob="outerHTML">
+				@PanelFormEventoContenido(usuarioID, evento)
+			</section>
+		} else {
+			<section id="panel-form-evento" class="panel">
+				@PanelFormEventoContenido(usuarioID, evento)
+			</section>
+		}
+	}
+}
+
+templ PanelFormEventoContenido(usuarioID string, evento *db.Evento) {
+	<h2>{ tituloEvento(evento) }</h2>
+	<form class="formulario" hx-post="/eventos" hx-swap="none" hx-indicator="#indicador-carga">
+		<input type="hidden" name="usuario_id" value={ usuarioID }/>
+		<input type="hidden" name="id" value={ idEvento(evento) }/>
+		<label for="evento-nombre">Nombre</label>
+		<input type="text" id="evento-nombre" name="nombre" value={ nombreEvento(evento) } required/>
+		<label for="evento-capacidad">Capacidad</label>
+		<input type="number" id="evento-capacidad" name="capacidad" min="1" value={ capacidadEvento(evento) } required/>
+		<label for="evento-fecha">Fecha y hora</label>
+		<input type="datetime-local" id="evento-fecha" name="fecha" value={ fechaEvento(evento) } required/>
+		<button type="submit" class="btn btn-primario">{ botonEvento(evento) }</button>
+		if evento != nil {
+			<button type="button" class="btn btn-secundario" hx-get={ "/?usuario_id=" + usuarioID } hx-target="#panel-form-evento" hx-select="#panel-form-evento" hx-swap="outerHTML" hx-push-url={ "/?usuario_id=" + usuarioID }>Cancelar edición</button>
+		}
+	</form>
+}
+

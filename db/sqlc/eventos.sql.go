@@ -132,6 +132,80 @@ func (q *Queries) ListarEventos(ctx context.Context) ([]Evento, error) {
 	return items, nil
 }
 
+const listarEventosConReservas = `-- name: ListarEventosConReservas :many
+SELECT e.id, e.nombre, e.capacidad, e.fecha, COUNT(t.id)::BIGINT AS reservas
+FROM eventos e
+LEFT JOIN tickets t ON t.id_evento = e.id
+GROUP BY e.id
+ORDER BY e.fecha ASC
+`
+
+type ListarEventosConReservasRow struct {
+	ID        int32
+	Nombre    string
+	Capacidad int32
+	Fecha     time.Time
+	Reservas  int64
+}
+
+func (q *Queries) ListarEventosConReservas(ctx context.Context) ([]ListarEventosConReservasRow, error) {
+	rows, err := q.db.QueryContext(ctx, listarEventosConReservas)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListarEventosConReservasRow
+	for rows.Next() {
+		var i ListarEventosConReservasRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Nombre,
+			&i.Capacidad,
+			&i.Fecha,
+			&i.Reservas,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const obtenerEventoConReservas = `-- name: ObtenerEventoConReservas :one
+SELECT e.id, e.nombre, e.capacidad, e.fecha, COUNT(t.id)::BIGINT AS reservas
+FROM eventos e
+LEFT JOIN tickets t ON t.id_evento = e.id
+WHERE e.id = $1
+GROUP BY e.id
+`
+
+type ObtenerEventoConReservasRow struct {
+	ID        int32
+	Nombre    string
+	Capacidad int32
+	Fecha     time.Time
+	Reservas  int64
+}
+
+func (q *Queries) ObtenerEventoConReservas(ctx context.Context, id int32) (ObtenerEventoConReservasRow, error) {
+	row := q.db.QueryRowContext(ctx, obtenerEventoConReservas, id)
+	var i ObtenerEventoConReservasRow
+	err := row.Scan(
+		&i.ID,
+		&i.Nombre,
+		&i.Capacidad,
+		&i.Fecha,
+		&i.Reservas,
+	)
+	return i, err
+}
+
 const obtenerEventoPorID = `-- name: ObtenerEventoPorID :one
 SELECT id, nombre, capacidad, fecha FROM eventos
 WHERE id = $1 LIMIT 1

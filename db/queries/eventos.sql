@@ -28,3 +28,17 @@ FOR UPDATE;
 -- name: EliminarEvento :execrows
 DELETE FROM eventos
 WHERE id = $1;
+-- name: ListarEventosConReservas :many
+SELECT e.id, e.nombre, e.capacidad, e.fecha, COUNT(t.id)::BIGINT AS reservas
+FROM eventos e
+LEFT JOIN tickets t ON t.id_evento = e.id
+GROUP BY e.id
+ORDER BY e.fecha ASC;
+
+
+-- name: ObtenerEventoConReservas :one
+SELECT e.id, e.nombre, e.capacidad, e.fecha, COUNT(t.id)::BIGINT AS reservas
+FROM eventos e
+LEFT JOIN tickets t ON t.id_evento = e.id
+WHERE e.id = $1
+GROUP BY e.id;

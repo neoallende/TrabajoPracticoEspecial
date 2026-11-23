@@ -86,6 +86,25 @@ func (q *Queries) ObtenerCapacidadReservada(ctx context.Context, idEvento int32)
 	return count, err
 }
 
+const obtenerTicketPorID = `-- name: ObtenerTicketPorID :one
+SELECT id, id_usuario, id_evento, fecha
+FROM tickets
+WHERE id = $1
+LIMIT 1
+`
+
+func (q *Queries) ObtenerTicketPorID(ctx context.Context, id int32) (Ticket, error) {
+	row := q.db.QueryRowContext(ctx, obtenerTicketPorID, id)
+	var i Ticket
+	err := row.Scan(
+		&i.ID,
+		&i.IDUsuario,
+		&i.IDEvento,
+		&i.Fecha,
+	)
+	return i, err
+}
+
 const reservarTicket = `-- name: ReservarTicket :one
 INSERT INTO tickets (id_usuario, id_evento)
 VALUES ($1, $2)

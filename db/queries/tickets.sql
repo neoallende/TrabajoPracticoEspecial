@@ -20,3 +20,9 @@ WHERE id_evento = $1;
 -- name: EliminarTicket :execrows
 DELETE FROM tickets
 WHERE id = $1 AND id_usuario = $2;
+
+-- name: ObtenerTicketPorID :one
+SELECT id, id_usuario, id_evento, fecha
+FROM tickets
+WHERE id = $1
+LIMIT 1;

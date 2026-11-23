@@ -39,7 +39,7 @@ func Layout(titulo string, contenido templ.Component) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</title><link rel=\"stylesheet\" href=\"/styles.css\"></head><body>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</title><link rel=\"stylesheet\" href=\"/styles.css\"><script src=\"https://unpkg.com/htmx.org@2.0.8\" defer></script></head><body><div id=\"indicador-carga\" class=\"indicador-carga htmx-indicator\" role=\"status\" aria-live=\"polite\">Cargando…</div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

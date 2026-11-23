@@ -2,6 +2,7 @@
 
 # sqlc: el del PATH, o el de ~/go/bin si no está en el PATH.
 SQLC := $(shell command -v sqlc 2>/dev/null || echo $(HOME)/go/bin/sqlc)
+TEMPL := $(shell command -v templ 2>/dev/null || echo $(HOME)/go/bin/templ)
 
 test:
 	@echo "=== 1. Limpiando contenedores y volúmenes previos ==="
@@ -9,6 +10,7 @@ test:
 
 	@echo "=== 2. Generando código Go con sqlc ==="
 	$(SQLC) generate
+	$(TEMPL) generate
 
 	@echo "=== 3. Levantando contenedor de PostgreSQL ==="
 	docker compose up -d db

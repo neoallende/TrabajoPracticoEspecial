@@ -8,9 +8,12 @@ templ Layout(titulo string, contenido templ.Component) {
 			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 			<title>{ titulo }</title>
 			<link rel="stylesheet" href="/styles.css"/>
-			<script src="https://unpkg.com/htmx.org@2.0.4"></script>
+			<script src="https://unpkg.com/htmx.org@2.0.8" defer></script>
 		</head>
-		<body hx-boost="true" hx-target="#app" hx-swap="outerHTML">
+		<body>
+			<div id="indicador-carga" class="indicador-carga htmx-indicator" role="status" aria-live="polite">
+				Cargando…
+			</div>
 			@contenido
 		</body>
 	</html>
