@@ -72,6 +72,7 @@ Go renderiza los componentes del servidor mediante `templ`, mientras que HTMX pe
 │   ├── home.go             # Página principal
 │   ├── eventos.go          # Creación, edición y eliminación de eventos
 │   ├── usuarios.go         # Registro de usuarios
+│   ├── tickets.go          # Reserva y cancelación de reservas de eventos
 │   ├── htmx.go             # Funcionalidad relacionada con HTMX
 │   ├── partials.go         # Preparación de datos para actualizaciones parciales
 │   ├── esadmin.go          # Verificación del rol administrador
