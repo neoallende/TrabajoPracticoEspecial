@@ -1,10 +1,10 @@
-# IAccess — rama `tp5-revision-controlada`
+# IAccess — rama `tp6`
 
-Trabajo Práctico Especial: aplicación web para la **gestión de eventos y reservas de tickets**, desarrollada con Go, PostgreSQL y [templ](https://templ.guide/).
-
-## Dominio de la aplicación
+# Trabajo Práctico Especial: aplicación web para la gestión de eventos y reservas de tickets
 
 IAccess permite administrar eventos y gestionar las reservas de tickets de los usuarios.
+
+## Dominio de la aplicación
 
 La aplicación contempla dos tipos de cuentas:
 
@@ -51,16 +51,17 @@ En esta versión se incorporaron las siguientes modificaciones:
 - **Separación de permisos por rol:** ahora únicamente las cuentas administradoras pueden crear, editar y eliminar eventos.
 - **Restricciones para administradores:** no pueden reservar tickets, consultar las reservas de los usuarios, crear usuarios ni eliminar su propia cuenta.
 - **Registro de usuarios:** los usuarios registrados desde la aplicación reciben automáticamente el rol `user`, sin posibilidad de seleccionar su rol desde el formulario.
+- **Integración de HTMX:** se incorporó HTMX para gestionar las interacciones con el servidor y actualizar partes de la interfaz sin recargar la página completa.
 
 ## Stack
 
 - **Go** (`net/http` con `http.ServeMux`) como servidor.
 - **[templ](https://templ.guide/):** vistas tipadas que se compilan a Go.
 - **PostgreSQL 15** + **[sqlc](https://sqlc.dev/)** para consultas tipadas, con el driver [lib/pq](https://github.com/lib/pq).
-- **[HTMX 2](https://htmx.org/)** para navegación y actualizaciones parciales sin implementar una SPA JavaScript.
+- **[HTMX 2](https://htmx.org/):** para gestionar solicitudes HTTP y actualizaciones parciales de la interfaz.
 - **Docker / Docker Compose** para la base de datos y la aplicación.
 
-Go renderiza los componentes del servidor mediante `templ` y HTMX es el único mecanismo de interacción de la aplicación. Los formularios y controles no tienen `action`, `method` ni enlaces alternativos: envían solicitudes `hx-get`/`hx-post` y reciben fragmentos HTML. La aplicación requiere HTMX para operar; no implementa degradación progresiva ni flujos convencionales PRG.
+Go renderiza los componentes del servidor mediante `templ`, mientras que HTMX permite actualizar partes de la interfaz a partir de las respuestas HTML generadas por el servidor, sin implementar una SPA JavaScript.
 
 ## Estructura
 
@@ -71,7 +72,7 @@ Go renderiza los componentes del servidor mediante `templ` y HTMX es el único m
 │   ├── home.go             # Página principal
 │   ├── eventos.go          # Creación, edición y eliminación de eventos
 │   ├── usuarios.go         # Registro de usuarios
-│   ├── htmx.go             # Validación de solicitudes HTMX y errores parciales
+│   ├── htmx.go             # Funcionalidad relacionada con HTMX
 │   ├── partials.go         # Preparación de datos para actualizaciones parciales
 │   ├── esadmin.go          # Verificación del rol administrador
 │   └── notfound.go         # Manejo de rutas inexistentes (404)
@@ -110,7 +111,6 @@ Go renderiza los componentes del servidor mediante `templ` y HTMX es el único m
 | `GET` | `/styles.css` | Hoja de estilos | CSS |
 | Cualquier otra ruta | — | Página de error 404 | HTML |
 
-
 ### Actualizaciones parciales con HTMX
 
 - No se usa `hx-boost` global ni se reemplaza `#app-content` después de cada operación.
@@ -130,7 +130,7 @@ git clone --branch tp5-revision-controlada https://github.com/neoallende/Trabajo
 cd TrabajoPracticoEspecial
 ```
 
-La aplicación queda disponible en <http://localhost:8080>. Los dos modos usan los puertos `8080` y `5432`: no ejecutes ambos al mismo tiempo.
+La aplicación queda disponible en http://localhost:8080. Los dos modos usan los puertos `8080` y `5432`: no ejecutes ambos al mismo tiempo.
 
 ### Todo en contenedores (`run.sh`)
 
