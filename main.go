@@ -31,25 +31,24 @@ func main() {
 	queries := db.New(conn)
 	mux := http.NewServeMux()
 
-	// Página principal
 	mux.HandleFunc("GET /", handlers.Home(queries))
 
-	// Usuarios
+	// Las rutas POST originales se mantienen para formularios sin HTMX.
 	mux.HandleFunc("POST /usuarios", handlers.CrearUsuario(queries))
-	mux.HandleFunc("POST /usuarios/{id}/eliminar", handlers.EliminarUsuario(queries))
-
-	// Eventos (POST /eventos con un ID vacío crea un evento, con un ID no vacío edita el evento)
 	mux.HandleFunc("POST /eventos", handlers.GuardarEvento(queries))
-	mux.HandleFunc("POST /eventos/{id}/eliminar", handlers.EliminarEvento(queries))
-
-	// Tickets
 	mux.HandleFunc("POST /tickets", handlers.ReservarTicket(queries, conn))
+
+	// Las acciones reactivas usan DELETE y devuelven el contenido actualizado.
+	mux.HandleFunc("DELETE /usuarios/{id}", handlers.EliminarUsuario(queries))
+	mux.HandleFunc("DELETE /eventos/{id}", handlers.EliminarEvento(queries))
+	mux.HandleFunc("DELETE /tickets/{id}", handlers.CancelarTicket(queries))
+
+	// Compatibilidad con las rutas POST anteriores.
+	mux.HandleFunc("POST /usuarios/{id}/eliminar", handlers.EliminarUsuario(queries))
+	mux.HandleFunc("POST /eventos/{id}/eliminar", handlers.EliminarEvento(queries))
 	mux.HandleFunc("POST /tickets/{id}/cancelar", handlers.CancelarTicket(queries))
 
-	// Rutas no encontradas
 	mux.HandleFunc("/", handlers.NotFound)
-
-	// CSS
 	mux.Handle("GET /styles.css", http.StripPrefix("/", http.FileServer(http.Dir("./static"))))
 
 	fmt.Println("Servidor corriendo en http://localhost:8080")
