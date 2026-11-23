@@ -127,7 +127,7 @@ Go renderiza los componentes del servidor mediante `templ`, mientras que HTMX pe
 Clonar la rama:
 
 ```bash
-git clone --branch tp5-revision-controlada https://github.com/neoallende/TrabajoPracticoEspecial.git
+git clone --branch tp6 https://github.com/neoallende/TrabajoPracticoEspecial.git
 cd TrabajoPracticoEspecial
 ```
 
