@@ -24,3 +24,7 @@ RETURNING *;
 SELECT * FROM eventos
 WHERE id = $1
 FOR UPDATE;
+
+-- name: EliminarEvento :execrows
+DELETE FROM eventos
+WHERE id = $1;

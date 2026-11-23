@@ -1,7 +1,9 @@
+
 package views
 
 import (
 	"fmt"
+
 	db "github.com/neouuuu/TrabajoPracticoEspecial/db/sqlc"
 )
 
@@ -12,8 +14,9 @@ templ Home(
 	tickets []db.ListarTicketsPorUsuarioRow,
 	eventoEditar *db.Evento,
 	mensaje string,
+	esAdmin bool,
 ) {
-	@Layout("IAccess", HomeContent(eventos, reservas, usuarioID, tickets, eventoEditar, mensaje))
+	@Layout("IAccess", HomeContent(eventos, reservas, usuarioID, tickets, eventoEditar, mensaje, esAdmin))
 }
 
 templ HomeContent(
@@ -23,6 +26,7 @@ templ HomeContent(
 	tickets []db.ListarTicketsPorUsuarioRow,
 	eventoEditar *db.Evento,
 	mensaje string,
+	esAdmin bool,
 ) {
 	<header class="cabecera">
 		<h1>IAccess</h1>
@@ -37,6 +41,7 @@ templ HomeContent(
 		<aside class="columna-lateral">
 			<section class="panel">
 				<h2>Usuario</h2>
+
 				<form action="/usuarios" method="POST" class="formulario">
 					<label for="usuario-nombre">Nombre</label>
 					<input type="text" id="usuario-nombre" name="nombre" required/>
@@ -54,53 +59,63 @@ templ HomeContent(
 						<button type="submit" class="btn btn-secundario">Usar ID</button>
 					</div>
 				</form>
+
+				if usuarioID != "" {
+					if esAdmin {
+						<p class="estado">Sesión seleccionada: Administrador</p>
+					} else {
+						<p class="estado">Sesión seleccionada: Usuario</p>
+					}
+				}
 			</section>
 
-			<section class="panel">
-				<h2>
-					if eventoEditar != nil {
-						Editar evento
-					} else {
-						Nuevo evento
-					}
-				</h2>
+			if esAdmin {
+				<section class="panel">
+					<h2>
+						if eventoEditar != nil {
+							Editar evento
+						} else {
+							Nuevo evento
+						}
+					</h2>
 
-				<form action="/eventos" method="POST" class="formulario">
-					<input type="hidden" name="usuario_id" value={ usuarioID }/>
+					<form action="/eventos" method="POST" class="formulario">
+						<input type="hidden" name="usuario_id" value={ usuarioID }/>
 
-					if eventoEditar != nil {
-						<input type="hidden" name="id" value={ fmt.Sprint(eventoEditar.ID) }/>
-					}
+						if eventoEditar != nil {
+							<input type="hidden" name="id" value={ fmt.Sprint(eventoEditar.ID) }/>
+						}
 
-					<label for="evento-nombre">Nombre</label>
-					if eventoEditar != nil {
-						<input type="text" id="evento-nombre" name="nombre" value={ eventoEditar.Nombre } required/>
-					} else {
-						<input type="text" id="evento-nombre" name="nombre" required/>
-					}
+						<label for="evento-nombre">Nombre</label>
+						if eventoEditar != nil {
+							<input type="text" id="evento-nombre" name="nombre" value={ eventoEditar.Nombre } required/>
+						} else {
+							<input type="text" id="evento-nombre" name="nombre" required/>
+						}
 
-					<label for="evento-capacidad">Capacidad</label>
-					if eventoEditar != nil {
-						<input type="number" id="evento-capacidad" name="capacidad" min="1" value={ fmt.Sprint(eventoEditar.Capacidad) } required/>
-					} else {
-						<input type="number" id="evento-capacidad" name="capacidad" min="1" required/>
-					}
+						<label for="evento-capacidad">Capacidad</label>
+						if eventoEditar != nil {
+							<input type="number" id="evento-capacidad" name="capacidad" min="1" value={ fmt.Sprint(eventoEditar.Capacidad) } required/>
+						} else {
+							<input type="number" id="evento-capacidad" name="capacidad" min="1" required/>
+						}
 
-					<label for="evento-fecha">Fecha y hora</label>
-					if eventoEditar != nil {
-						<input type="datetime-local" id="evento-fecha" name="fecha" value={ eventoEditar.Fecha.Format("2006-01-02T15:04") } required/>
-					} else {
-						<input type="datetime-local" id="evento-fecha" name="fecha" required/>
-					}
+						<label for="evento-fecha">Fecha y hora</label>
+						if eventoEditar != nil {
+							<input type="datetime-local" id="evento-fecha" name="fecha" value={ eventoEditar.Fecha.Format("2006-01-02T15:04") } required/>
+						} else {
+							<input type="datetime-local" id="evento-fecha" name="fecha" required/>
+						}
 
-					if eventoEditar != nil {
-						<button type="submit" class="btn btn-primario">Guardar cambios</button>
-						<a href="/" class="btn btn-secundario">Cancelar edición</a>
-					} else {
-						<button type="submit" class="btn btn-primario">Crear evento</button>
-					}
-				</form>
-			</section>
+						if eventoEditar != nil {
+							<button type="submit" class="btn btn-primario">Guardar cambios</button>
+							<a href={ fmt.Sprintf("/?usuario_id=%s", usuarioID) } class="btn btn-secundario">Cancelar edición</a>
+						} else {
+							<button type="submit" class="btn btn-primario">Crear evento</button>
+						}
+					</form>
+				</section>
+			}
 		</aside>
 
 		<div class="columna-principal">
@@ -127,16 +142,31 @@ templ HomeContent(
 								</div>
 
 								<div class="ticket-talon">
-									if usuarioID != "" {
+									if usuarioID != "" && !esAdmin {
 										<form action="/tickets" method="POST">
 											<input type="hidden" name="usuario_id" value={ usuarioID }/>
 											<input type="hidden" name="evento_id" value={ fmt.Sprint(evento.ID) }/>
 											<button type="submit" class="btn btn-primario">Reservar</button>
 										</form>
 									}
-									<a class="btn btn-secundario" href={ fmt.Sprintf("/?editar=%d", evento.ID) }>
-										Editar
-									</a>
+
+									if esAdmin {
+										<a
+											class="btn btn-secundario"
+											href={ fmt.Sprintf("/?editar=%d&usuario_id=%s", evento.ID, usuarioID) }
+										>
+											Editar
+										</a>
+
+										<form
+											action={ fmt.Sprintf("/eventos/%d/eliminar?usuario_id=%s", evento.ID, usuarioID) }
+											method="POST"
+										>
+											<button type="submit" class="btn btn-peligro">
+												Eliminar evento
+											</button>
+										</form>
+									}
 								</div>
 							</li>
 						}
@@ -161,6 +191,7 @@ templ HomeContent(
 										{ ticket.EventoFecha.Format("02/01/2006 15:04") }
 									</p>
 								</div>
+
 								<div class="ticket-talon">
 									<form
 										action={ fmt.Sprintf("/tickets/%d/cancelar?usuario_id=%s", ticket.TicketID, usuarioID) }

@@ -36,13 +36,18 @@ func main() {
 
 	// Usuarios
 	mux.HandleFunc("POST /usuarios", handlers.CrearUsuario(queries))
+	mux.HandleFunc("POST /usuarios/{id}/eliminar", handlers.EliminarUsuario(queries))
 
-	// Eventos
+	// Eventos (POST /eventos con un ID vacío crea un evento, con un ID no vacío edita el evento)
 	mux.HandleFunc("POST /eventos", handlers.GuardarEvento(queries))
+	mux.HandleFunc("POST /eventos/{id}/eliminar", handlers.EliminarEvento(queries))
 
 	// Tickets
 	mux.HandleFunc("POST /tickets", handlers.ReservarTicket(queries, conn))
 	mux.HandleFunc("POST /tickets/{id}/cancelar", handlers.CancelarTicket(queries))
+
+	// Rutas no encontradas
+	mux.HandleFunc("/", handlers.NotFound)
 
 	// CSS
 	mux.Handle("GET /styles.css", http.StripPrefix("/", http.FileServer(http.Dir("./static"))))
